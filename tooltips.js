@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PrUn Tooltips by Rynx
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.8
 // @description  Adds FIO powered market tooltips to Apex console
 // @author       Manderius (Rynx), inspired by Tim Davis (binarygod, @timthedevguy)
 // @match        https://apex.prosperousuniverse.com/
@@ -12,16 +12,14 @@
 // @updateURL    https://raw.githubusercontent.com/Manderius/PrUn_Tooltips/main/tooltips.js
 // ==/UserScript==
 
-// Fix JQUERY conflicts
-this.$ = this.jQuery = jQuery.noConflict(true);
-
-
+let $ = jQuery;
 let prices = [];
 let last_update = null;
 let updates_on = null;
 let newPrices = false;
-let styles = '.tooltipster-base{display:flex;pointer-events:none;position:absolute!important;font-family:"Droid Sans",sans-serif;font-size:10px;color:#bbb}.tooltipster-box{flex:1 1 auto}.tooltipster-content{box-sizing:border-box;max-height:100%;max-width:100%;overflow:auto}.tooltipster-fade{opacity:0;-webkit-transition-property:opacity;-moz-transition-property:opacity;-o-transition-property:opacity;-ms-transition-property:opacity;transition-property:opacity}.tooltipster-fade.tooltipster-show{opacity:1}.tooltipster-sidetip .tooltipster-box{background:#222;border:1px solid #2b485a;box-shadow:0 0 5px rgba(63,162,222,.5);border-radius:0}.tooltipster-sidetip.tooltipster-right .tooltipster-box{margin-left:0}.tooltipster-sidetip .tooltipster-content{line-height:10px;padding:0}.tooltipster-sidetip .tooltipster-arrow{overflow:hidden;display:none;position:absolute}.tooltipster-content H1{border-bottom:1px solid #2b485a;background-color:rgba(63,162,222,.15);padding-bottom:8px;padding-top:9px;padding-left:10px;margin:0;font-weight:400;padding-right:10px;font-size:12px}'
-let tooltip_html = `<table class="PrUnTools_Table">
+const styles =
+    '.tooltipster-base{display:flex;pointer-events:none;position:absolute!important;font-family:"Droid Sans",sans-serif;font-size:10px;color:#bbb}.tooltipster-box{flex:1 1 auto}.tooltipster-content{box-sizing:border-box;max-height:100%;max-width:100%;overflow:auto}.tooltipster-fade{opacity:0;-webkit-transition-property:opacity;-moz-transition-property:opacity;-o-transition-property:opacity;-ms-transition-property:opacity;transition-property:opacity}.tooltipster-fade.tooltipster-show{opacity:1}.tooltipster-sidetip .tooltipster-box{background:#222;border:1px solid #2b485a;box-shadow:0 0 5px rgba(63,162,222,.5);border-radius:0}.tooltipster-sidetip.tooltipster-right .tooltipster-box{margin-left:0}.tooltipster-sidetip .tooltipster-content{line-height:10px;padding:0}.tooltipster-sidetip .tooltipster-arrow{overflow:hidden;display:none;position:absolute}.tooltipster-content H1{border-bottom:1px solid #2b485a;background-color:rgba(63,162,222,.15);padding-bottom:8px;padding-top:9px;padding-left:10px;margin:0;font-weight:400;padding-right:10px;font-size:12px}';
+const tooltip_html = `<table class="PrUnTools_Table">
 						<thead>
 							<tr>
 								<th></th>
@@ -75,33 +73,40 @@ let tooltip_html = `<table class="PrUnTools_Table">
 						</tfoot>
 					</table>`;
 
-
-
-
 function create_tooltips(data) {
     // Create any missing tooltip content placeholder
     data.tickers.forEach(function (item) {
         if ($(`#tooltip_${item}`).length == 0) {
             // Create our element
-            $('BODY').append($('<DIV />').attr('style', 'display:none;').append($('<DIV />').attr('id', `tooltip_${item}`).addClass('PrUn_tooltip_content')));
+            $("BODY").append(
+                $("<DIV />")
+                    .attr("style", "display:none;")
+                    .append(
+                        $("<DIV />")
+                            .attr("id", `tooltip_${item}`)
+                            .addClass("PrUn_tooltip_content")
+                    )
+            );
         }
     });
     //Loop through elements and configure to use tooltips
     data.elements.each(function (i, item) {
-        if (!$(item).parent().parent().hasClass('PrUn_tooltip')) {
+        if (!$(item).parent().parent().hasClass("PrUn_tooltip")) {
             let ticker = item.innerHTML;
-            let title = $(item).parent().parent().attr('title');
-            $(`#tooltip_${ticker}`).attr('data-title', title);
-            $(item).parent().parent().attr('data-tooltip-content', `#tooltip_${ticker}`);
-            $(item).parent().parent().addClass('PrUn_tooltip');
+            let title = $(item).parent().parent().attr("title");
+            $(`#tooltip_${ticker}`).attr("data-title", title);
+            $(item)
+                .parent()
+                .parent()
+                .attr("data-tooltip-content", `#tooltip_${ticker}`);
+            $(item).parent().parent().addClass("PrUn_tooltip");
         }
     });
 }
 
 function getPrices(callback) {
-
     // Check if last_update is null or if now is past the updates on
-    if (!last_update || (new Date()) > updates_on) {
+    if (!last_update || new Date() > updates_on) {
         // Get market data from FIO
         $.ajax({
             type: "GET",
@@ -115,69 +120,116 @@ function getPrices(callback) {
                 updates_on = new Date(last_update.getTime() + 5 * 60000);
 
                 newPrices = true;
-                
+
                 callback(output);
             },
             error: function (output) {
                 console.log("Error in API call");
-            }
+            },
         });
     } else {
         // No update needed go ahead and parse the data
         callback(prices);
     }
-
 }
 
-
 function prepareTooltips(prices, isNewPrice) {
-    const tickers = new Set(prices.map(row => row.MaterialTicker))
-    tickers.forEach(ticker => {
+    const tickers = new Set(prices.map((row) => row.MaterialTicker));
+    tickers.forEach((ticker) => {
         if (!isNewPrice && $(`#tooltip_${ticker}`).length !== 0) {
             return;
         }
         $(`#tooltip_${ticker}`).remove();
-        html = tooltip_html.replace('{UPDATE}', updates_on.toLocaleString());
+        let html = tooltip_html.replace(
+            "{UPDATE}",
+            updates_on.toLocaleString()
+        );
         // Find Material in FIO data
-        let market_data = prices.filter(obj => { return obj.MaterialTicker === ticker });
+        let market_data = prices.filter((obj) => {
+            return obj.MaterialTicker === ticker;
+        });
         // Filter should return all 4 markets worth of data, populate our tooltip
         market_data.forEach(function (ticker_data) {
-            html = html.replace(`{Ask.${ticker_data.ExchangeCode}}`, ticker_data.Ask);
-            html = html.replace(`{Buy.${ticker_data.ExchangeCode}}`, ticker_data.Bid);
-            html = html.replace(`{Avg.${ticker_data.ExchangeCode}}`, ticker_data.PriceAverage);
-            html = html.replace(`{Supply.${ticker_data.ExchangeCode}}`, ticker_data.Supply);
-            html = html.replace(`{Demand.${ticker_data.ExchangeCode}}`, ticker_data.Demand);
+            html = html.replace(
+                `{Ask.${ticker_data.ExchangeCode}}`,
+                ticker_data.Ask ? ticker_data.Ask.toLocaleString() : "null"
+            );
+            html = html.replace(
+                `{Buy.${ticker_data.ExchangeCode}}`,
+                ticker_data.Bid ? ticker_data.Bid.toLocaleString() : "null"
+            );
+            html = html.replace(
+                `{Avg.${ticker_data.ExchangeCode}}`,
+                ticker_data.PriceAverage
+                    ? ticker_data.PriceAverage.toLocaleString()
+                    : "null"
+            );
+            html = html.replace(
+                `{Supply.${ticker_data.ExchangeCode}}`,
+                ticker_data.Supply
+                    ? ticker_data.Supply.toLocaleString()
+                    : "null"
+            );
+            html = html.replace(
+                `{Demand.${ticker_data.ExchangeCode}}`,
+                ticker_data.Demand
+                    ? ticker_data.Demand.toLocaleString()
+                    : "null"
+            );
         });
         // Replace any nulls with '--'
-        html = html.replaceAll('null', '--');
+        html = html.replaceAll("null", "--");
         // Add tooltip to box
-        $('BODY').append($('<DIV />').attr('style', 'display:none;').append($('<DIV />').attr('id', `tooltip_${ticker}`).addClass('PrUn_tooltip_content')));
-        
+        $("BODY").append(
+            $("<DIV />")
+                .attr("style", "display:none;")
+                .append(
+                    $("<DIV />")
+                        .attr("id", `tooltip_${ticker}`)
+                        .addClass("PrUn_tooltip_content")
+                )
+        );
+
         $(`#tooltip_${ticker}`).html(`<h1>TITLE-REPLACE</h1>${html}`);
     });
 }
 
 function addTooltipToItem(item) {
-    $(item).parent().parent().attr('data-tooltip-content', `#tooltip_${item.innerHTML}`);
-    let title = $(item).parent().parent().attr('title');
-    $(item).parent().parent().addClass('PrUn_tooltip');
+    $(item)
+        .parent()
+        .parent()
+        .attr("data-tooltip-content", `#tooltip_${item.innerHTML}`);
+    let title = $(item).parent().parent().attr("title");
+    $(item).parent().parent().addClass("PrUn_tooltip");
     if ($(`#tooltip_${item.innerHTML}:contains(TITLE-REPLACE)`).length > 0) {
-        $(`#tooltip_${item.innerHTML}`).html($(`#tooltip_${item.innerHTML}`).html().replace("TITLE-REPLACE", title));
+        $(`#tooltip_${item.innerHTML}`).html(
+            $(`#tooltip_${item.innerHTML}`)
+                .html()
+                .replace("TITLE-REPLACE", title)
+        );
     }
 }
 
 function addTooltipsToItems() {
-    const elements = $.merge($('.T5C45pTOW9QTzokWPqLQJg\\=\\=[style*="height: 48px"] span.rjpYL1i9cZmf47fM9qWyZQ\\=\\='), $('.T5C45pTOW9QTzokWPqLQJg\\=\\=[style*="height: 33px"] span.rjpYL1i9cZmf47fM9qWyZQ\\=\\=')); 
-    Array.from(elements).forEach(item => { addTooltipToItem(item) });
+    let matIconContClass = "MaterialIcon__container___q8gKIx8";
+    let coloredIconClass = "ColoredIcon__label___OU1I4oP";
+
+    const elements =
+        $(`.${matIconContClass}[style*="height: 48px"] span.${coloredIconClass},
+			            .${matIconContClass}[style*="height: 33px"] span.${coloredIconClass},
+                        .${matIconContClass}[style*="height: 28px"] span.${coloredIconClass}`);
+    Array.from(elements).forEach((item) => {
+        addTooltipToItem(item);
+    });
 }
 
 function activateTooltips() {
     try {
-        $('.PrUn_tooltip').tooltipster('destroy');
+        $(".PrUn_tooltip").tooltipster("destroy");
     } catch {}
 
-    $('.PrUn_tooltip').tooltipster({
-        position: 'right',
+    $(".PrUn_tooltip").tooltipster({
+        position: "right",
         contentAsHTML: true,
         contentCloning: true,
         arrow: false,
@@ -191,58 +243,70 @@ function setupTooltips() {
         newPrices = false;
         addTooltipsToItems();
         activateTooltips();
-    }
+    };
 
     getPrices(load);
-
 }
 
 function monitorOnElementCreated(selector, callback, onlyOnce = true) {
-    const getElementsFromNodes = (nodes) => Array.from(nodes).flatMap(node => node.nodeType === 3 ? null : Array.from(node.querySelectorAll(selector))).filter(item => item !== null);
+    const getElementsFromNodes = (nodes) =>
+        Array.from(nodes)
+            .flatMap((node) =>
+                node.nodeType === 3
+                    ? null
+                    : Array.from(node.querySelectorAll(selector))
+            )
+            .filter((item) => item !== null);
     let onMutationsObserved = function (mutations) {
         mutations.forEach(function (mutation) {
             if (mutation.addedNodes.length) {
-                var elements = getElementsFromNodes(mutation.addedNodes);
-                for (var i = 0, len = elements.length; i < len; i++) {
+                const elements = getElementsFromNodes(mutation.addedNodes);
+                for (let i = 0; i < elements.length; i++) {
                     callback(elements[i]);
                     if (onlyOnce) observer.disconnect();
+                    return;
                 }
             }
         });
     };
 
-    let containerSelector = 'body';
+    let containerSelector = "body";
     let target = document.querySelector(containerSelector);
     let config = { childList: true, subtree: true };
-    let MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+    let MutationObserver =
+        window.MutationObserver || window.WebKitMutationObserver;
     let observer = new MutationObserver(onMutationsObserved);
     observer.observe(target, config);
 }
 
 function addStyle(styleString) {
-    var style = document.createElement('style');
-    style.type = 'text/css';
+    var style = document.createElement("style");
+    style.type = "text/css";
     if (style.styleSheet) {
         style.styleSheet.cssText = styleString;
     } else {
         style.appendChild(document.createTextNode(styleString));
     }
-    document.getElementsByTagName('head')[0].appendChild(style);
+    document.getElementsByTagName("head")[0].appendChild(style);
 }
 
 function waitForApexLoad() {
     const setup = () => {
         addStyle(styles);
         setupTooltips();
-        const insideFrameSelector = '.N32GL8CJBOw3-rNx0PBZkQ\\=\\=';
-        monitorOnElementCreated(insideFrameSelector, () => {setTimeout(setupTooltips, 500)}, false);
-    }
+        const insideFrameSelector = ".MaterialIcon__container___q8gKIx8";
+        monitorOnElementCreated(
+            insideFrameSelector,
+            () => setTimeout(setupTooltips, 100),
+            false
+        );
+    };
 
-    const selector = '#TOUR_TARGET_BUTTON_BUFFER_NEW';
-    monitorOnElementCreated(selector, setup)
+    const selector = "#TOUR_TARGET_BUTTON_BUFFER_NEW";
+    monitorOnElementCreated(selector, setup);
 }
 
 (function () {
-    'use strict';
+    "use strict";
     waitForApexLoad();
 })();
