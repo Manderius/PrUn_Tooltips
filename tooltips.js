@@ -73,37 +73,6 @@ const tooltip_html = `<table class="PrUnTools_Table">
 						</tfoot>
 					</table>`;
 
-function create_tooltips(data) {
-    // Create any missing tooltip content placeholder
-    data.tickers.forEach(function (item) {
-        if ($(`#tooltip_${item}`).length == 0) {
-            // Create our element
-            $("BODY").append(
-                $("<DIV />")
-                    .attr("style", "display:none;")
-                    .append(
-                        $("<DIV />")
-                            .attr("id", `tooltip_${item}`)
-                            .addClass("PrUn_tooltip_content")
-                    )
-            );
-        }
-    });
-    //Loop through elements and configure to use tooltips
-    data.elements.each(function (i, item) {
-        if (!$(item).parent().parent().hasClass("PrUn_tooltip")) {
-            let ticker = item.innerHTML;
-            let title = $(item).parent().parent().attr("title");
-            $(`#tooltip_${ticker}`).attr("data-title", title);
-            $(item)
-                .parent()
-                .parent()
-                .attr("data-tooltip-content", `#tooltip_${ticker}`);
-            $(item).parent().parent().addClass("PrUn_tooltip");
-        }
-    });
-}
-
 function getPrices(callback) {
     // Check if last_update is null or if now is past the updates on
     if (!last_update || new Date() > updates_on) {
