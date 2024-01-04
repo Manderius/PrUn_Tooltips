@@ -223,8 +223,7 @@ function addEventListenersToItems(items) {
         const ticker = $(item).find(".ColoredIcon__label___OU1I4oP").text();
         $(item).children().attr("title", "");
         let tooltip;
-        item.addEventListener("mouseover", (event) => {
-            event.preventDefault();
+        item.addEventListener("mouseover", () => {
             tooltip = showTooltip(item, ticker);
         });
         item.addEventListener("mouseout", () => {
@@ -234,11 +233,7 @@ function addEventListenersToItems(items) {
 }
 
 function setupTooltips(items) {
-    const load = () => {
-        addEventListenersToItems(items);
-    };
-
-    getPrices(load);
+    getPrices(() => addEventListenersToItems(items));
 }
 
 function monitorOnElementCreated(selector, callback, onlyOnce = true) {
