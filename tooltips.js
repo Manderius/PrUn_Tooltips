@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PrUn Tooltips by Rynx
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  Adds FIO powered market tooltips to Apex console
 // @author       Manderius (Rynx), inspired by Tim Davis (binarygod, @timthedevguy)
 // @match        https://apex.prosperousuniverse.com/
@@ -215,7 +215,9 @@ function showTooltip(item, ticker) {
 }
 
 function hideTooltip(tooltip) {
-    tooltip.remove();
+    try {
+        tooltip.remove();
+    } catch (e) {}
 }
 
 function addEventListenersToItems(items) {
@@ -227,6 +229,9 @@ function addEventListenersToItems(items) {
             tooltip = showTooltip(item, ticker);
         });
         item.addEventListener("mouseout", () => {
+            hideTooltip(tooltip);
+        });
+        item.addEventListener("mousedown", () => {
             hideTooltip(tooltip);
         });
     });
